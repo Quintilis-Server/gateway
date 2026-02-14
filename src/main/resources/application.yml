@@ -1,29 +1,42 @@
 server:
     port: 8080
 
+logging:
+#    level:
+#        org.springframework.cloud.gateway: TRACE
+#        org.springframework.http.server.reactive: DEBUG
+#        org.springframework.web.reactive: DEBUG
+#        reactor.netty: DEBUG
+
+management:
+    endpoints:
+        web:
+            exposure:
+                include: "*"
+
 spring:
     application:
         name: quintilis-gateway
-    
+
     data:
         redis:
-            host: "${CACHE_HOST:localhost}"
-            port: "${CACHE_PORT:6379}"
-            database: "${CACHE_DATABASE:0}"
-    
+            host: "${REDIS_HOST:localhost}"
+            port: "${REDIS_PORT:6379}"
+            database: "${REDIS_DATABASE:0}"
+
     security:
         oauth2:
             resourceserver:
                 jwt:
                     jwk-set-uri: "${RESOURCE_SERVER_JWK:http://localhost:9000/oauth2/jwks}"
                     issuer-uri: "${RESOURCE_ISSUER:http://localhost:9000}"
-    
+
     cloud:
         gateway:
             globalcors:
                 cors-configurations:
                     '[/**]':
-                        allowedOrigins: "*" # Em produção, troque pelo domínio do front (ex: http://localhost:3000)
+                        allowedOrigins: "*"
                         allowedMethods:
                             - GET
                             - POST
@@ -31,27 +44,3 @@ spring:
                             - DELETE
                             - OPTIONS
                         allowedHeaders: "*"
-            routes:
-                #        - id: auth-route
-                #          uri: "${AUTH_SERVICE_URI:http://localhost:9000}"
-                #          predicates:
-                #            - Path=/api/auth/**
-                #          filters:
-                #            - StripPrefix=1
-                #            - name: RequestRateLimiter
-                #              args:
-                #                redis-rate-limiter.replenishRate: 20
-                #                redis-rate-limiter.burstCapacity: 40
-                #                key-resolver: "#{@userKeyResolver}"
-                
-                -   id: forum-route
-                    uri: "${FORUM_SERVICE_URI:http://localhost:8081}"
-                    predicates:
-                        - Path=/api/forum/**
-                    filters:
-                        - StripPrefix=1
-                        -   name: RequestRateLimiter
-                            args:
-                                redis-rate-limiter.replenishRate: 10
-                                redis-rate-limiter.burstCapacity: 20
-                                key-resolver: "#{@userKeyResolver}"
