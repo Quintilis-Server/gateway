@@ -15,6 +15,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter
 import org.springframework.security.web.server.SecurityWebFilterChain
+import org.springframework.security.web.server.authentication.RedirectServerAuthenticationEntryPoint
 import reactor.core.publisher.Mono
 
 @Configuration
@@ -23,6 +24,9 @@ class SecurityConfig {
 
     @Value("\${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
     private lateinit var jwkSetUri: String
+
+    @Value("\${quintilis.auth.frontend}")
+    private lateinit var authServerUrl: String
 
     @Bean
     fun springSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
@@ -39,6 +43,11 @@ class SecurityConfig {
                     .pathMatchers(HttpMethod.PUT, "/api/forum/**").authenticated()
                     .pathMatchers(HttpMethod.DELETE, "/api/forum/**").authenticated()
                     .anyExchange().authenticated()
+            }
+            .exceptionHandling { exceptions ->
+                exceptions.authenticationEntryPoint(
+                    RedirectServerAuthenticationEntryPoint(authServerUrl)
+                )
             }
             .oauth2ResourceServer { oauth2 ->
                 oauth2.jwt { jwt ->

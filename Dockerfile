@@ -4,19 +4,17 @@ FROM maven:3.9-eclipse-temurin-25-noble AS build
 
 WORKDIR /workspace
 
-# Copy parent pom and common module first for better layer caching
+# 1. Copia o código dos dois módulos
 COPY common ./common
-COPY gateway/pom.xml ./gateway/
-COPY gateway/.mvn ./gateway/.mvn
-COPY gateway/mvnw ./gateway/
+COPY gateway ./gateway
 
-# Copy gateway source
-COPY gateway/src ./gateway/src
+# 2. Instala o módulo Common primeiro (para que o Gateway consiga achá-lo)
+WORKDIR /workspace/common
+RUN mvn clean install -DskipTests
 
-# Build the application
+# 3. Compila o Gateway (que agora vai achar o common no cache do Maven)
 WORKDIR /workspace/gateway
 RUN mvn clean package -DskipTests
-
 
 # Stage 2: Runtime stage
 FROM eclipse-temurin:25-jre-noble
