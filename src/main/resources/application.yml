@@ -44,3 +44,6 @@ spring:
                             - DELETE
                             - OPTIONS
                         allowedHeaders: "*"
+quintilis:
+    auth:
+        frontend: "${AUTH_FRONTEND:http://localhost:9000}"
