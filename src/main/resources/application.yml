@@ -31,19 +31,6 @@ spring:
                     jwk-set-uri: "${RESOURCE_SERVER_JWK:http://localhost:9000/oauth2/jwks}"
                     issuer-uri: "${RESOURCE_ISSUER:http://localhost:9000}"
 
-    cloud:
-        gateway:
-            globalcors:
-                cors-configurations:
-                    '[/**]':
-                        allowedOrigins: "*"
-                        allowedMethods:
-                            - GET
-                            - POST
-                            - PUT
-                            - DELETE
-                            - OPTIONS
-                        allowedHeaders: "*"
 quintilis:
     auth:
         frontend: "${AUTH_FRONTEND:http://localhost:9000}"
