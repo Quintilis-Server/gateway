@@ -58,6 +58,10 @@ class SecurityConfig {
                             .authenticated()
                             .pathMatchers(HttpMethod.DELETE, "/api/forum/**")
                             .authenticated()
+                            .pathMatchers(HttpMethod.PUT, "/api/auth/roles/**")
+                            .hasAuthority("ROLE_ADMIN")
+                            .pathMatchers(HttpMethod.PUT, "/api/auth/users/**")
+                            .hasAuthority("ROLE_ADMIN")
                             .anyExchange()
                             .authenticated()
                 }
