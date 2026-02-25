@@ -42,6 +42,13 @@ class SecurityConfig {
                     exchanges
                             .pathMatchers(HttpMethod.OPTIONS, "/**")
                             .permitAll()
+                            .pathMatchers(
+                                    HttpMethod.GET,
+                                    "/api/auth/roles/**",
+                                    "/api/auth/permissions/**",
+                                    "/api/auth/users/**"
+                            )
+                            .hasAuthority("ROLE_ADMIN")
                             .pathMatchers("/api/auth/**")
                             .permitAll()
                             .pathMatchers(HttpMethod.GET, "/api/forum/**")
