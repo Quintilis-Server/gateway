@@ -14,6 +14,50 @@ management:
             exposure:
                 include: "*"
 
+quintilis:
+    auth:
+        frontend: "${AUTH_FRONTEND:http://localhost:9000}"
+    security:
+        rules:
+            - path: "/api/auth/roles/**"
+              method: GET
+              roles: ["ADMIN"]
+            - path: "/api/auth/permissions/**"
+              method: GET
+              roles: ["ADMIN"]
+            - path: "/api/auth/users/**"
+              method: GET
+              roles: ["ADMIN"]
+            - path: "/api/auth/roles/**"
+              method: PUT
+              roles: ["ADMIN"]
+            - path: "/api/auth/users/**"
+              method: PUT
+              roles: ["ADMIN"]
+            - path: "/api/forum/category/**"
+              method: POST
+              roles: ["ADMIN"]
+              permissions: ["category.create"]
+            - path: "/api/forum/category/**"
+              method: PUT
+              roles: ["ADMIN"]
+              permissions: ["category.edit"]
+            - path: "/api/forum/category/**"
+              method: DELETE
+              roles: ["ADMIN"]
+              permissions: ["category.delete"]
+            - path: "/api/forum/topic/new"
+              method: POST
+              roles: ["USER"]
+            - path: "/api/forum/topic/**"
+              method: PUT
+              roles: ["USER"]
+              permissions: ["topic.edit"]
+            - path: "/api/forum/topic/**"
+              method: DELETE
+              roles: ["ADMIN", "MODERATOR"]
+              permissions: ["topic.delete"]
+
 spring:
     application:
         name: quintilis-gateway
@@ -31,6 +75,16 @@ spring:
                     jwk-set-uri: "${RESOURCE_SERVER_JWK:http://localhost:9000/oauth2/jwks}"
                     issuer-uri: "${RESOURCE_ISSUER:http://localhost:9000}"
 
-quintilis:
-    auth:
-        frontend: "${AUTH_FRONTEND:http://localhost:9000}"
+    cloud:
+        gateway:
+            globalcors:
+                cors-configurations:
+                    '[/**]':
+                        allowedOrigins: "*"
+                        allowedMethods:
+                            - GET
+                            - POST
+                            - PUT
+                            - DELETE
+                            - OPTIONS
+                        allowedHeaders: "*"

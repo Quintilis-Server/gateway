@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.convert.converter.Converter
 import org.springframework.http.HttpMethod
+import org.springframework.http.HttpStatus
 import org.springframework.security.authentication.AbstractAuthenticationToken
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
@@ -13,10 +14,9 @@ import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter
 import org.springframework.security.web.server.SecurityWebFilterChain
-import org.springframework.security.web.server.authentication.RedirectServerAuthenticationEntryPoint
+import org.springframework.security.web.server.authentication.HttpStatusServerEntryPoint
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
@@ -26,7 +26,7 @@ import reactor.core.publisher.Mono
 
 @Configuration
 @EnableWebFluxSecurity
-class SecurityConfig {
+class SecurityConfig(private val properties: GatewayConfigProperties) {
 
     @Value("\${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
     private lateinit var jwkSetUri: String
@@ -39,42 +39,46 @@ class SecurityConfig {
                 .csrf { it.disable() }
                 .cors(Customizer.withDefaults())
                 .authorizeExchange { exchanges ->
+                    exchanges.pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                    // Apply dynamic rules from YAML
+                    properties.rules.forEach { rule ->
+                        val authorities = mutableListOf<String>()
+                        rule.roles.forEach { authorities.add("ROLE_$it") }
+                        rule.permissions.forEach {
+                            authorities.add(it)
+                        } // Permissions don't get the ROLE_ prefix
+
+                        val matcher =
+                                if (rule.method != null) {
+                                    exchanges.pathMatchers(rule.method, rule.path)
+                                } else {
+                                    exchanges.pathMatchers(rule.path)
+                                }
+
+                        if (authorities.isNotEmpty()) {
+                            matcher.hasAnyAuthority(*authorities.toTypedArray())
+                        } else {
+                            matcher.authenticated()
+                        }
+                    }
+
+                    // Default Fallbacks
                     exchanges
-                            .pathMatchers(HttpMethod.OPTIONS, "/**")
-                            .permitAll()
-                            .pathMatchers(
-                                    HttpMethod.GET,
-                                    "/api/auth/roles/**",
-                                    "/api/auth/permissions/**",
-                                    "/api/auth/users/**"
-                            )
-                            .hasAuthority("ROLE_ADMIN")
                             .pathMatchers("/api/auth/**")
-                            .permitAll()
+                            .permitAll() // Login/Register routes are public
+                    exchanges
                             .pathMatchers(HttpMethod.GET, "/api/forum/**")
-                            .permitAll()
-                            .pathMatchers(HttpMethod.POST, "/api/forum/category/**")
-                            .hasAuthority("ROLE_ADMIN")
-                            .pathMatchers(HttpMethod.PUT, "/api/forum/category/**")
-                            .hasAuthority("ROLE_ADMIN")
-                            .pathMatchers(HttpMethod.DELETE, "/api/forum/category/**")
-                            .hasAuthority("ROLE_ADMIN")
-                            .pathMatchers(HttpMethod.POST, "/api/forum/**")
-                            .authenticated()
-                            .pathMatchers(HttpMethod.PUT, "/api/forum/**")
-                            .authenticated()
-                            .pathMatchers(HttpMethod.DELETE, "/api/forum/**")
-                            .authenticated()
-                            .pathMatchers(HttpMethod.PUT, "/api/auth/roles/**")
-                            .hasAuthority("ROLE_ADMIN")
-                            .pathMatchers(HttpMethod.PUT, "/api/auth/users/**")
-                            .hasAuthority("ROLE_ADMIN")
-                            .anyExchange()
-                            .authenticated()
+                            .permitAll() // Reading the forum is public
+                    exchanges.anyExchange().authenticated()
                 }
                 .exceptionHandling { exceptions ->
                     exceptions.authenticationEntryPoint(
-                            RedirectServerAuthenticationEntryPoint(authServerUrl)
+                            HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED)
+                    )
+                    exceptions.accessDeniedHandler(
+                            org.springframework.security.web.server.authorization
+                                    .HttpStatusServerAccessDeniedHandler(HttpStatus.FORBIDDEN)
                     )
                 }
                 .oauth2ResourceServer { oauth2 ->
@@ -92,9 +96,34 @@ class SecurityConfig {
     }
 
     private fun jwtAuthenticationConverter(): Converter<Jwt, Mono<AbstractAuthenticationToken>> {
-        val grantedAuthoritiesConverter = JwtGrantedAuthoritiesConverter()
-        grantedAuthoritiesConverter.setAuthoritiesClaimName("roles")
-        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_")
+        val grantedAuthoritiesConverter =
+                Converter<Jwt, Collection<org.springframework.security.core.GrantedAuthority>> { jwt
+                    ->
+                    val authorities =
+                            mutableListOf<org.springframework.security.core.GrantedAuthority>()
+
+                    // Extract roles
+                    val roles = jwt.getClaimAsStringList("roles") ?: emptyList()
+                    roles.forEach { role ->
+                        authorities.add(
+                                org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                        "ROLE_$role"
+                                )
+                        )
+                    }
+
+                    // Extract permissions
+                    val permissions = jwt.getClaimAsStringList("permissions") ?: emptyList()
+                    permissions.forEach { permission ->
+                        authorities.add(
+                                org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                        permission
+                                )
+                        )
+                    }
+
+                    authorities
+                }
 
         val jwtAuthenticationConverter = JwtAuthenticationConverter()
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter)
