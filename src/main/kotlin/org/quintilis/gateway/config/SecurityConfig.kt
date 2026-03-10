@@ -42,31 +42,37 @@ class SecurityConfig(private val properties: GatewayConfigProperties) {
                     exchanges.pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                     // Apply dynamic rules from YAML
-                    properties.rules.forEach { rule ->
-                        val authorities = mutableListOf<String>()
-                        rule.roles.forEach { authorities.add("ROLE_$it") }
-                        rule.permissions.forEach {
-                            authorities.add(it)
-                        } // Permissions don't get the ROLE_ prefix
-
-                        val matcher =
-                                if (rule.method != null) {
-                                    exchanges.pathMatchers(rule.method, rule.path)
-                                } else {
-                                    exchanges.pathMatchers(rule.path)
-                                }
-
-                        if (authorities.isNotEmpty()) {
-                            matcher.hasAnyAuthority(*authorities.toTypedArray())
-                        } else {
-                            matcher.authenticated()
-                        }
-                    }
+//                    properties.rules.forEach { rule ->
+//                        val authorities = mutableListOf<String>()
+//                        rule.roles.forEach { authorities.add("ROLE_$it") }
+//                        rule.permissions.forEach {
+//                            authorities.add(it)
+//                        } // Permissions don't get the ROLE_ prefix
+//
+//                        val matcher =
+//                                if (rule.method != null) {
+//                                    exchanges.pathMatchers(rule.method, rule.path)
+//                                } else {
+//                                    exchanges.pathMatchers(rule.path)
+//                                }
+//
+//                        if (authorities.isNotEmpty()) {
+//                            matcher.hasAnyAuthority(*authorities.toTypedArray())
+//                        } else {
+//                            matcher.authenticated()
+//                        }
+//                    }
 
                     // Default Fallbacks
-                    exchanges
-                            .pathMatchers("/api/auth/**")
-                            .permitAll() // Login/Register routes are public
+                    exchanges.pathMatchers(
+                        "/api/auth/**",       // Suas rotas REST de auth
+                        "/login",             // A tela de login do React
+                        "/register",          // A tela de registro
+                        "/oauth2/**",         // Fluxos de autorização e token do Spring
+                        "/assets/**",         // CSS/JS do seu React
+                        "/error",             // Páginas de erro
+                        "/.well-known/**"     // (MUITO IMPORTANTE) Para descoberta do OIDC e JWKS
+                    ).permitAll()// Login/Register routes are public
                     exchanges
                             .pathMatchers(HttpMethod.GET, "/api/forum/**")
                             .permitAll() // Reading the forum is public
@@ -134,9 +140,18 @@ class SecurityConfig(private val properties: GatewayConfigProperties) {
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOrigins = listOf("*")
-        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
+
+        // 🔥 Troque o "*" pelos endereços reais do seu frontend
+        configuration.allowedOrigins = listOf(
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://localhost:5174",
+            "https://admin.quintilis.org" // Coloque os de prod aqui também
+        )
+        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
         configuration.allowedHeaders = listOf("*")
+        configuration.allowCredentials = true // 🔥 Muito importante se você usa JWT/Cookies
+
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)
         return source

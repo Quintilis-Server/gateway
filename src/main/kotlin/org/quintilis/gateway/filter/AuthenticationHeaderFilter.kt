@@ -13,35 +13,34 @@ class AuthenticationHeaderFilter : GlobalFilter, Ordered {
 
     override fun filter(exchange: ServerWebExchange, chain: GatewayFilterChain): Mono<Void> {
         return exchange.getPrincipal<java.security.Principal>()
-                .flatMap { principal ->
-                    if (principal is JwtAuthenticationToken) {
-                        val jwt = principal.token
-                        val userId = jwt.claims["user_id"]?.toString() ?: ""
+            .flatMap { principal ->
+                if (principal is JwtAuthenticationToken) {
+                    val jwt = principal.token
+                    val userId = jwt.claims["user_id"]?.toString() ?: ""
 
-                        val rolesClaim = jwt.claims["roles"] as? List<*> ?: emptyList<Any>()
-                        val roles = rolesClaim.map { it.toString() }.joinToString(",")
+                    val rolesClaim = jwt.claims["roles"] as? List<*> ?: emptyList<Any>()
+                    val roles = rolesClaim.map { it.toString() }.joinToString(",")
 
-                        val permissionsClaim =
-                                jwt.claims["permissions"] as? List<*> ?: emptyList<Any>()
-                        val permissions = permissionsClaim.map { it.toString() }.joinToString(",")
+                    val permissionsClaim =
+                            jwt.claims["permissions"] as? List<*> ?: emptyList<Any>()
+                    val permissions = permissionsClaim.map { it.toString() }.joinToString(",")
 
-                        val mutatedRequest =
-                                exchange.request
-                                        .mutate()
-                                        .headers { h ->
-                                            h.add("X-User-Id", userId)
-                                            h.add("X-User-Roles", roles)
-                                            h.add("X-User-Permissions", permissions)
-                                        }
-                                        .build()
-
-                        val mutatedExchange = exchange.mutate().request(mutatedRequest).build()
-                        chain.filter(mutatedExchange)
-                    } else {
-                        chain.filter(exchange)
-                    }
+                    val mutatedRequest =
+                        exchange.request
+                            .mutate()
+                            .headers { h ->
+                                h.add("X-User-Id", userId)
+                                h.add("X-User-Roles", roles)
+                                h.add("X-User-Permissions", permissions)
+                            }
+                            .build()
+                    val mutatedExchange = exchange.mutate().request(mutatedRequest).build()
+                    chain.filter(mutatedExchange)
+                } else {
+                    chain.filter(exchange)
                 }
-                .switchIfEmpty(chain.filter(exchange))
+            }
+            .switchIfEmpty(chain.filter(exchange))
     }
 
     override fun getOrder(): Int {

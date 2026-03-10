@@ -18,29 +18,41 @@ class RouteConfig(private val userKeyResolver: KeyResolver) {
     @Bean
     fun customRouteLocator(builder: RouteLocatorBuilder): RouteLocator {
         return builder.routes()
-                .route("auth-route") { r ->
-                    r.path("/api/auth/**")
-                            .filters { f ->
-                                f.stripPrefix(1)
-                                f.requestRateLimiter { c ->
-                                    c.setRateLimiter(redisRateLimiter())
-                                    c.setKeyResolver(userKeyResolver)
-                                }
-                            }
-                            .uri(authUri)
-                }
-                .route("forum-route") { r ->
-                    r.path("/api/forum/**")
-                            .filters { f ->
-                                f.stripPrefix(2)
-                                f.requestRateLimiter { c ->
-                                    c.setRateLimiter(redisRateLimiter())
-                                    c.setKeyResolver(userKeyResolver)
-                                }
-                            }
-                            .uri(forumUri)
-                }
-                .build()
+            .route("auth-api-route") { r ->
+                r.path("/api/auth/**")
+                    .filters { f ->
+                        f.stripPrefix(2) // Remove /api/auth
+                        f.requestRateLimiter { c ->
+                            c.setRateLimiter(redisRateLimiter())
+                            c.setKeyResolver(userKeyResolver)
+                        }
+                    }
+                    .uri(authUri)
+            }
+            // 2. Rota para o Fluxo OAuth2, Login e Estáticos do React (MUITO IMPORTANTE: Sem stripPrefix!)
+            .route("auth-oidc-route") { r ->
+                r.path("/login", "/oauth2/**", "/assets/**", "/register", "/error")
+                    .filters { f ->
+                        f.preserveHostHeader()
+                        f.requestRateLimiter { c ->
+                            c.setRateLimiter(redisRateLimiter())
+                            c.setKeyResolver(userKeyResolver)
+                        }
+                    }
+                    .uri(authUri)
+            }
+            .route("forum-route") { r ->
+                r.path("/api/forum/**")
+                    .filters { f ->
+                        f.stripPrefix(2)
+                        f.requestRateLimiter { c ->
+                            c.setRateLimiter(redisRateLimiter())
+                            c.setKeyResolver(userKeyResolver)
+                        }
+                    }
+                    .uri(forumUri)
+            }
+            .build()
     }
 
     @Bean
