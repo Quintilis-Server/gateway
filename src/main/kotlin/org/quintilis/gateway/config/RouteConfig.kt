@@ -11,9 +11,9 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class RouteConfig(private val userKeyResolver: KeyResolver) {
 
-    @Value("\${AUTH_SERVICE_URI:http://localhost:9000}") private lateinit var authUri: String
+    @Value("\${quintilis.auth.frontend:http://localhost:9000}") private lateinit var authUri: String
 
-    @Value("\${FORUM_SERVICE_URI:http://localhost:8081}") private lateinit var forumUri: String
+    @Value("\${quintilis.forum.frontend:http://localhost:8081}") private lateinit var forumUri: String
 
     @Bean
     fun customRouteLocator(builder: RouteLocatorBuilder): RouteLocator {

@@ -17,6 +17,8 @@ management:
 quintilis:
     auth:
         frontend: "${AUTH_FRONTEND:http://localhost:9000}"
+    forum:
+        frontend: "${FORUM_FRONTEND:http://localhost:9000}"
     security:
         rules:
             - path: "/api/auth/roles/**"
@@ -72,8 +74,8 @@ spring:
         oauth2:
             resourceserver:
                 jwt:
-                    jwk-set-uri: "${RESOURCE_SERVER_JWK:http://localhost:9000/oauth2/jwks}"
-                    issuer-uri: "${RESOURCE_ISSUER:http://localhost:9000}"
+                    jwk-set-uri: "${RESOURCE_SERVER_JWK}"
+                    issuer-uri: "${RESOURCE_ISSUER}"
 
 #    cloud:
 #        gateway:
