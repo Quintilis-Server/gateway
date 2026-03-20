@@ -22,8 +22,6 @@ import org.springframework.web.cors.reactive.CorsConfigurationSource
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 import reactor.core.publisher.Mono
 
-// ... [outras importacoes omitidas para focar na mudança]
-
 @Configuration
 @EnableWebFluxSecurity
 class SecurityConfig(private val properties: GatewayConfigProperties) {
@@ -65,7 +63,7 @@ class SecurityConfig(private val properties: GatewayConfigProperties) {
 
                     // Default Fallbacks
                     exchanges.pathMatchers(
-                        "/api/auth/**",       // Suas rotas REST de auth
+//                        "/api/auth/**",
                         "/login",             // A tela de login do React
                         "/register",          // A tela de registro
                         "/oauth2/**",         // Fluxos de autorização e token do Spring
